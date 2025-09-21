@@ -9,11 +9,13 @@ import UIKit
 
 final class EditTransactionViewController: UIViewController {
     
-    var onSave: ((String) -> Void)?
+    var onSave: ((TransactionItem) -> Void)?
     var onCancel: (() -> Void)?
     
     private let amountField = UITextField()
     private let noteField = UITextField()
+    private let typeControl = UISegmentedControl(items: ["Despesa", "Receita"])
+    private let datePicker = UIDatePicker()
     private let stack = UIStackView()
     
     override func viewDidLoad() {
@@ -50,12 +52,20 @@ final class EditTransactionViewController: UIViewController {
         noteField.placeholder = "Nota (ex: Mercado, Uber...)"
         noteField.borderStyle = .roundedRect
         
+        typeControl.selectedSegmentIndex = 0
+        
+        datePicker.date = .now
+        datePicker.datePickerMode = .date
+        datePicker.preferredDatePickerStyle = .compact
+        
         stack.axis = .vertical
         stack.spacing = 16
         stack.translatesAutoresizingMaskIntoConstraints = false
         
         stack.addArrangedSubview(amountField)
         stack.addArrangedSubview(noteField)
+        stack.addArrangedSubview(typeControl)
+        stack.addArrangedSubview(datePicker)
     }
     
     private func layout() {
@@ -70,13 +80,18 @@ final class EditTransactionViewController: UIViewController {
     // MARK: Actions
     @objc private func didTapSave() {
         let valuesText = amountField.text?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        guard !valuesText.isEmpty else { return presentAlert("Informe um valor") }
+        guard let amount = Decimal(string: valuesText) else { return presentAlert("Informe um valor") }
         
         let noteText = noteField.text?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         guard !noteText.isEmpty else { return presentAlert("Informe o nome da transação") }
 
-        let display = "\(noteText) - R$ \(valuesText)"
-        onSave?(display)
+        let kind = TransactionKind(rawValue: typeControl.selectedSegmentIndex) ?? .expense
+        let item = TransactionItem(amount: amount,
+                                   note: noteText,
+                                   date: datePicker.date,
+                                   kind: kind)
+        
+        onSave?(item)
     }
     
     @objc private func didTapCancel() { onCancel?() }
